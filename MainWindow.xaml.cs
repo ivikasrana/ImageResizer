@@ -55,6 +55,9 @@ public partial class MainWindow : Window
         if (dlg.ShowDialog() == true) TxtDest.Text = dlg.FolderName;
     }
 
+    void BtnGitHub_Click(object sender, RoutedEventArgs e) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/ivikasrana/ImageResizer") { UseShellExecute = true });
+
     void BtnCancel_Click(object sender, RoutedEventArgs e) => _cts?.Cancel();
 
     async void BtnStart_Click(object sender, RoutedEventArgs e)
