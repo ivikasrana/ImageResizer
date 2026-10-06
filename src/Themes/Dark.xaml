@@ -1,7 +1,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="BgBrush" Color="#000000"/>
-    <SolidColorBrush x:Key="CardBrush" Color="#1C1C1E"/>
+    <LinearGradientBrush x:Key="BgBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#050B16" Offset="0"/>
+        <GradientStop Color="#0B1626" Offset="0.55"/>
+        <GradientStop Color="#13192A" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="CardBrush" Color="#CC0E1626"/>
     <SolidColorBrush x:Key="LabelBrush" Color="#F5F5F7"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="#A3A3AC"/>
     <SolidColorBrush x:Key="FillBrush" Color="#3D787880"/>

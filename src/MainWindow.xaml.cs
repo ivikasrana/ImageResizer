@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     // Icon on the toggle button (shows what you'll switch to) and dark/light native title bar.
     void UpdateThemeChrome()
     {
+        Sky.Visibility = App.IsDark ? Visibility.Visible : Visibility.Collapsed;
         BtnTheme.Content = App.IsDark ? "" : "";
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;
