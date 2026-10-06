@@ -1,5 +1,7 @@
 # Image Resizer
 
+[![License: MIT + Commercial](https://img.shields.io/badge/license-MIT%20%2B%20Commercial-blue.svg)](LICENSE)
+
 WPF (.NET 10) app that batch-resizes images to **JPG** or **WebP**. Drop the single `.exe` into any folder of
 images and run it: the source and output folders default to the folder the exe is in. Results are written to a
 `New_<timestamp>` sub-folder, keeping the original folder structure.
@@ -48,7 +50,7 @@ copy build\Release\libwebp.dll, build\Release\libsharpyuv.dll -> src\native\
 
 ## License
 
-MIT License — free for personal, educational, and non-commercial use.
+MIT License â€” free for personal, educational, and non-commercial use.
 Commercial / business use requires a paid license. Contact [vikasrulez@gmail.com](mailto:vikasrulez@gmail.com).
 See [LICENSE](LICENSE).
 
