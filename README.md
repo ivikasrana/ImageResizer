@@ -50,7 +50,7 @@ copy build\Release\libwebp.dll, build\Release\libsharpyuv.dll -> src\native\
 
 ## License
 
-MIT License â€” free for personal, educational, and non-commercial use.
+MIT License — free for personal, educational, and non-commercial use.
 Commercial / business use requires a paid license. Contact [vikasrulez@gmail.com](mailto:vikasrulez@gmail.com).
 See [LICENSE](LICENSE).
 
