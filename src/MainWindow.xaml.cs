@@ -58,9 +58,16 @@ public partial class MainWindow : Window
     void BtnGitHub_Click(object sender, RoutedEventArgs e) =>
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/ivikasrana/ImageResizer") { UseShellExecute = true });
 
-    // No title bar: drag the window by any empty area; right-click for Minimize / Close.
-    void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    // No title bar: drag the window from anywhere that isn't an interactive control.
+    void Window_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        for (var d = e.OriginalSource as DependencyObject; d is not null; d = d is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+                 ? System.Windows.Media.VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+        {
+            if (d is System.Windows.Controls.Primitives.ButtonBase or System.Windows.Controls.Primitives.TextBoxBase
+                or System.Windows.Controls.Primitives.RangeBase or System.Windows.Controls.Primitives.Thumb
+                or System.Windows.Controls.Primitives.ScrollBar) return;
+        }
         if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove();
     }
 
