@@ -13,17 +13,17 @@ images and run it: the source and output folders default to the folder the exe i
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
 
 ```powershell
-dotnet build
-dotnet run
+dotnet build src
+dotnet run --project src
 ```
 
 ## Bundle into a single .exe
 
-The project is configured (see `ImageResizer.csproj`) for a self-contained, compressed, single-file x64 publish.
+The project is configured (see `src/ImageResizer.csproj`) for a self-contained, compressed, single-file x64 publish.
 The .NET runtime is inside the exe, so the target PC needs nothing installed.
 
 ```powershell
-dotnet publish -c Release -o publish
+dotnet publish src -c Release -o publish
 ```
 
 The result is `publish\ImageResizer.exe` (~62 MB). Copy it anywhere and run it.
@@ -32,11 +32,11 @@ How it is bundled:
 
 - **.NET runtime + WPF**: `SelfContained`, `PublishSingleFile`, `IncludeNativeLibrariesForSelfExtract` and
   `EnableCompressionInSingleFile` in the csproj.
-- **libwebp**: `native/libwebp.dll` and `native/libsharpyuv.dll` are `EmbeddedResource`s. On first WebP use
+- **libwebp**: `src/native/libwebp.dll` and `src/native/libsharpyuv.dll` are `EmbeddedResource`s. On first WebP use
   `WebpWriter` unpacks them to `%TEMP%\ImageResizer\<version>\` and loads them from there.
 
 Optional: for a ~2 MB exe that needs the .NET 10 Desktop Runtime installed on the PC, publish with
-`dotnet publish -c Release -o publish --self-contained false -p:EnableCompressionInSingleFile=false`.
+`dotnet publish src -c Release -o publish --self-contained false -p:EnableCompressionInSingleFile=false`.
 
 ### Rebuilding the native libwebp (optional)
 
@@ -50,7 +50,7 @@ cmake -S libwebp -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=
   -DWEBP_BUILD_VWEBP=OFF -DWEBP_BUILD_WEBPINFO=OFF -DWEBP_BUILD_WEBPMUX=OFF -DWEBP_BUILD_EXTRAS=OFF `
   -DWEBP_BUILD_ANIM_UTILS=OFF -DWEBP_BUILD_LIBWEBPMUX=OFF
 cmake --build build --config Release --target webp
-copy build\Release\libwebp.dll, build\Release\libsharpyuv.dll -> native\
+copy build\Release\libwebp.dll, build\Release\libsharpyuv.dll -> src\native\
 ```
 
 ## License
@@ -62,4 +62,4 @@ See [LICENSE](LICENSE).
 ## Third-party
 
 WebP encoding uses [libwebp](https://github.com/webmproject/libwebp) v1.6.0 (BSD-3-Clause).
-Its license is in `native/libwebp-LICENSE.txt`.
+Its license is in `src/native/libwebp-LICENSE.txt`.
