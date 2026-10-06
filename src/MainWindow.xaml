@@ -4,7 +4,18 @@
         Title="Image Resizer" Width="680" Height="740" MinWidth="600" MinHeight="640"
         Background="{DynamicResource BgBrush}" Foreground="{DynamicResource LabelBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="14" UseLayoutRounding="True"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResizeWithGrip"
+        BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="Minimize" Click="Minimize_Click"/>
+            <MenuItem Header="Close" Click="Close_Click"/>
+        </ContextMenu>
+    </Window.ContextMenu>
     <Grid>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24">

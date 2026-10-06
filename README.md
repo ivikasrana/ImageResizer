@@ -8,16 +8,9 @@ images and run it: the source and output folders default to the folder the exe i
 - Light / dark theme (remembered in `%LocalAppData%\ImageResizer\theme.txt`)
 - Inputs: jpg, jpeg, png, bmp, gif, tif, tiff, webp
 
-## Build
+## Bundle into a single .exe
 
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
-
-```powershell
-dotnet build src
-dotnet run --project src
-```
-
-## Bundle into a single .exe
 
 The project is configured (see `src/ImageResizer.csproj`) for a self-contained, compressed, single-file x64 publish.
 The .NET runtime is inside the exe, so the target PC needs nothing installed.

@@ -58,6 +58,15 @@ public partial class MainWindow : Window
     void BtnGitHub_Click(object sender, RoutedEventArgs e) =>
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/ivikasrana/ImageResizer") { UseShellExecute = true });
 
+    // No title bar: drag the window by any empty area; right-click for Minimize / Close.
+    void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove();
+    }
+
+    void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    void Close_Click(object sender, RoutedEventArgs e) => Close();
+
     void BtnCancel_Click(object sender, RoutedEventArgs e) => _cts?.Cancel();
 
     async void BtnStart_Click(object sender, RoutedEventArgs e)
