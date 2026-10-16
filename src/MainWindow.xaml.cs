@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
@@ -109,6 +110,7 @@ public partial class MainWindow : Window
                 .ToList(), ct);
 
             int done = 0, failed = 0;
+            long lastReport = 0;
             var progress = new Progress<string>(name =>
             {
                 Progress.Value = files.Count == 0 ? 0 : (done + failed) * 100.0 / files.Count;
@@ -128,7 +130,10 @@ public partial class MainWindow : Window
                         Interlocked.Increment(ref done);
                     }
                     catch { Interlocked.Increment(ref failed); }
-                    ((IProgress<string>)progress).Report(file);
+                    var now = Environment.TickCount64;
+                    var prev = Interlocked.Read(ref lastReport);
+                    if (now - prev >= 100 && Interlocked.CompareExchange(ref lastReport, now, prev) == prev)
+                        ((IProgress<string>)progress).Report(file);
                 }), ct);
 
             Progress.Value = 100;
@@ -146,9 +151,8 @@ public partial class MainWindow : Window
 
     static void Resize(string input, string output, double scale, int quality, bool webp, bool keepExif)
     {
-        BitmapFrame frame;
-        using (var fs = File.OpenRead(input))
-            frame = BitmapFrame.Create(fs, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        using var fs = new FileStream(input, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.SequentialScan);
+        var frame = BitmapDecoder.Create(fs, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None).Frames[0];
 
         BitmapMetadata? metadata = null;
         double rotation = 0;
@@ -161,33 +165,61 @@ public partial class MainWindow : Window
         catch { /* no EXIF */ }
 
         BitmapSource source = frame;
+        if (scale < 1.0)
+        {
+            fs.Position = 0;
+            var img = new BitmapImage();
+            img.BeginInit();
+            img.StreamSource = fs;
+            img.CacheOption = BitmapCacheOption.OnLoad;
+            img.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreImageCache;
+            img.DecodePixelWidth = Math.Max(1, (int)Math.Round(frame.PixelWidth * scale));
+            img.DecodePixelHeight = Math.Max(1, (int)Math.Round(frame.PixelHeight * scale));
+            img.EndInit();
+            source = img;
+        }
         if (rotation != 0) source = new TransformedBitmap(source, new RotateTransform(rotation));
-        if (scale < 1.0) source = new TransformedBitmap(source, new ScaleTransform(scale, scale));
 
-        var bgra = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
-        int w = bgra.PixelWidth, h = bgra.PixelHeight;
-        var pixels = new byte[w * h * 4];
-        bgra.CopyPixels(pixels, w * 4, 0);
-
-        if (webp)
+        var hasAlpha = HasAlpha(frame);
+        BitmapSource result;
+        byte[]? pixels = null;
+        try
         {
-            WebpWriter.Save(output, pixels, w, h, quality);
-            return;
-        }
+            if (webp || hasAlpha)
+            {
+                var bgra = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+                int w = bgra.PixelWidth, h = bgra.PixelHeight, len = w * h * 4;
+                pixels = ArrayPool<byte>.Shared.Rent(len);
+                bgra.CopyPixels(new Int32Rect(0, 0, w, h), pixels, w * 4, 0);
 
-        // JPG has no alpha: flatten onto white.
-        for (int i = 0; i < pixels.Length; i += 4)
+                if (webp)
+                {
+                    WebpWriter.Save(output, pixels, w, h, quality);
+                    return;
+                }
+
+                // JPG has no alpha: flatten onto white.
+                for (int i = 0; i < len; i += 4)
+                {
+                    int a = pixels[i + 3];
+                    if (a == 255) continue;
+                    int bg = 255 * (255 - a);
+                    pixels[i] = (byte)((pixels[i] * a + bg) / 255);
+                    pixels[i + 1] = (byte)((pixels[i + 1] * a + bg) / 255);
+                    pixels[i + 2] = (byte)((pixels[i + 2] * a + bg) / 255);
+                    pixels[i + 3] = 255;
+                }
+                result = BitmapSource.Create(w, h, frame.DpiX, frame.DpiY, PixelFormats.Bgr32, null, pixels, w * 4);
+            }
+            else
+            {
+                result = new FormatConvertedBitmap(source, PixelFormats.Bgr24, null, 0);
+            }
+        }
+        finally
         {
-            int a = pixels[i + 3];
-            if (a == 255) continue;
-            pixels[i] = (byte)((pixels[i] * a + 255 * (255 - a)) / 255);
-            pixels[i + 1] = (byte)((pixels[i + 1] * a + 255 * (255 - a)) / 255);
-            pixels[i + 2] = (byte)((pixels[i + 2] * a + 255 * (255 - a)) / 255);
-            pixels[i + 3] = 255;
+            if (pixels is not null) ArrayPool<byte>.Shared.Return(pixels);
         }
-
-        var result = BitmapSource.Create(w, h, frame.DpiX, frame.DpiY, PixelFormats.Bgr32, null, pixels, w * 4);
-        result.Freeze();
 
         BitmapMetadata? exif = null;
         if (keepExif && metadata is not null)
@@ -204,6 +236,14 @@ public partial class MainWindow : Window
         encoder.Frames.Add(BitmapFrame.Create(result, null, exif, null));
         using var outStream = File.Create(output);
         encoder.Save(outStream);
+    }
+
+    static bool HasAlpha(BitmapSource s)
+    {
+        var f = s.Format;
+        if (f == PixelFormats.Bgra32 || f == PixelFormats.Pbgra32 || f == PixelFormats.Rgba64 || f == PixelFormats.Prgba64
+            || f == PixelFormats.Rgba128Float || f == PixelFormats.Prgba128Float) return true;
+        return s.Palette?.Colors.Any(c => c.A < 255) == true;
     }
 
     void SetBusy(bool busy)

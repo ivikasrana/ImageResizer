@@ -13,6 +13,7 @@ public sealed class StarField : Canvas
 
     readonly List<Star> _stars = [];
     readonly List<Ellipse> _glows = [];
+    readonly List<(IAnimatable Target, DependencyProperty Property, AnimationTimeline Animation)> _anims = [];
     readonly Random _rnd = new();
     bool _built;
 
@@ -22,11 +23,37 @@ public sealed class StarField : Canvas
         ClipToBounds = true;
         Loaded += (_, _) => Build();
         SizeChanged += (_, _) => Layout();
+        IsVisibleChanged += (_, _) => Run(IsVisible);
     }
 
     double R(double a, double b) => a + _rnd.NextDouble() * (b - a);
 
     static Duration Secs(double s) => new(TimeSpan.FromSeconds(s));
+
+    static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
+
+    static readonly Brush StarBrush = Frozen(new SolidColorBrush(Color.FromRgb(243, 234, 217)));
+    static readonly Brush GoldStarBrush = Frozen(new SolidColorBrush(Color.FromRgb(247, 197, 107)));
+    static readonly Brush SparkBrush = Frozen(new RadialGradientBrush
+    {
+        GradientStops =
+        {
+            new GradientStop(Color.FromArgb(255, 247, 197, 107), 0),
+            new GradientStop(Color.FromArgb(210, 247, 197, 107), 0.3),
+            new GradientStop(Color.FromArgb(0, 247, 197, 107), 1),
+        },
+    });
+
+    void Animate(IAnimatable target, DependencyProperty property, AnimationTimeline animation)
+    {
+        Timeline.SetDesiredFrameRate(animation, 30);
+        _anims.Add((target, property, animation));
+    }
+
+    void Run(bool on)
+    {
+        foreach (var (target, property, animation) in _anims) target.BeginAnimation(property, on ? animation : null);
+    }
 
     void Build()
     {
@@ -38,10 +65,11 @@ public sealed class StarField : Canvas
         {
             var glow = new Ellipse
             {
-                Fill = new RadialGradientBrush(Color.FromArgb(alpha, color.R, color.G, color.B), Color.FromArgb(0, color.R, color.G, color.B)),
+                Fill = Frozen(new RadialGradientBrush(Color.FromArgb(alpha, color.R, color.G, color.B), Color.FromArgb(0, color.R, color.G, color.B))),
                 Tag = left,
+                CacheMode = new BitmapCache(),
             };
-            glow.BeginAnimation(OpacityProperty, new DoubleAnimation(0.55, 1, Secs(R(14, 22))) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+            Animate(glow, OpacityProperty, new DoubleAnimation(0.55, 1, Secs(R(14, 22))) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
             Children.Add(glow);
             _glows.Add(glow);
         }
@@ -53,9 +81,9 @@ public sealed class StarField : Canvas
             var star = new Ellipse
             {
                 Width = size, Height = size, Opacity = 0.4,
-                Fill = new SolidColorBrush(i % 9 == 0 ? Color.FromRgb(247, 197, 107) : Color.FromRgb(243, 234, 217)),
+                Fill = i % 9 == 0 ? GoldStarBrush : StarBrush,
             };
-            star.BeginAnimation(OpacityProperty, new DoubleAnimation(0.25, 0.95, Secs(R(4, 9)))
+            Animate(star, OpacityProperty, new DoubleAnimation(0.25, 0.95, Secs(R(4, 9)))
             {
                 AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(R(0, 6)),
             });
@@ -71,24 +99,16 @@ public sealed class StarField : Canvas
             var p = new Ellipse
             {
                 Width = size, Height = size, Opacity = 0,
-                Fill = new RadialGradientBrush
-                {
-                    GradientStops =
-                    {
-                        new GradientStop(Color.FromArgb(255, 247, 197, 107), 0),
-                        new GradientStop(Color.FromArgb(210, 247, 197, 107), 0.3),
-                        new GradientStop(Color.FromArgb(0, 247, 197, 107), 1),
-                    },
-                },
+                Fill = SparkBrush,
                 RenderTransform = new TranslateTransform(),
             };
             var drift = R(-30, 30);
             var dur = Secs(R(18, 34));
             var begin = TimeSpan.FromSeconds(R(0, 20));
             var t = (TranslateTransform)p.RenderTransform;
-            t.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, -rise, dur) { RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin });
-            t.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, drift, dur) { RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin });
-            p.BeginAnimation(OpacityProperty, new DoubleAnimationUsingKeyFrames
+            Animate(t, TranslateTransform.YProperty, new DoubleAnimation(0, -rise, dur) { RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin });
+            Animate(t, TranslateTransform.XProperty, new DoubleAnimation(0, drift, dur) { RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin });
+            Animate(p, OpacityProperty, new DoubleAnimationUsingKeyFrames
             {
                 Duration = dur, RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin,
                 KeyFrames =
@@ -105,6 +125,7 @@ public sealed class StarField : Canvas
             Children.Add(p);
         }
         Layout();
+        Run(IsVisible);
     }
 
     void Layout()
