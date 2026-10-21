@@ -10,9 +10,12 @@ namespace ImageResizer;
 public sealed class StarField : Canvas
 {
     record Star(Ellipse Shape, double X, double Y);
+    record Glow(Ellipse Shape, bool Left);
+    record Spark(Ellipse Shape, double X);
 
     readonly List<Star> _stars = [];
-    readonly List<Ellipse> _glows = [];
+    readonly List<Glow> _glows = [];
+    readonly List<Spark> _sparks = [];
     readonly List<(IAnimatable Target, DependencyProperty Property, AnimationTimeline Animation)> _anims = [];
     readonly Random _rnd = new();
     bool _built;
@@ -66,12 +69,11 @@ public sealed class StarField : Canvas
             var glow = new Ellipse
             {
                 Fill = Frozen(new RadialGradientBrush(Color.FromArgb(alpha, color.R, color.G, color.B), Color.FromArgb(0, color.R, color.G, color.B))),
-                Tag = left,
                 CacheMode = new BitmapCache(),
             };
             Animate(glow, OpacityProperty, new DoubleAnimation(0.55, 1, Secs(R(14, 22))) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
             Children.Add(glow);
-            _glows.Add(glow);
+            _glows.Add(new Glow(glow, left));
         }
 
         // twinkling stars
@@ -119,10 +121,9 @@ public sealed class StarField : Canvas
                     new LinearDoubleKeyFrame(0, KeyTime.FromPercent(1)),
                 },
             });
-            SetLeft(p, R(0, 1) * 1000); // refined in Layout()
             SetBottom(p, -12);
-            p.Tag = _rnd.NextDouble();
             Children.Add(p);
+            _sparks.Add(new Spark(p, _rnd.NextDouble()));
         }
         Layout();
         Run(IsVisible);
@@ -132,14 +133,13 @@ public sealed class StarField : Canvas
     {
         if (!_built || ActualWidth <= 0) return;
         foreach (var s in _stars) { SetLeft(s.Shape, s.X * ActualWidth); SetTop(s.Shape, s.Y * ActualHeight); }
+        var d = Math.Max(ActualWidth, ActualHeight) * 0.7;
         foreach (var g in _glows)
         {
-            var d = Math.Max(ActualWidth, ActualHeight) * 0.7;
-            g.Width = g.Height = d;
-            if ((bool)g.Tag!) { SetLeft(g, -d * 0.3); SetTop(g, ActualHeight * 0.05); }
-            else { SetLeft(g, ActualWidth - d * 0.7); SetTop(g, ActualHeight - d * 0.7); }
+            g.Shape.Width = g.Shape.Height = d;
+            if (g.Left) { SetLeft(g.Shape, -d * 0.3); SetTop(g.Shape, ActualHeight * 0.05); }
+            else { SetLeft(g.Shape, ActualWidth - d * 0.7); SetTop(g.Shape, ActualHeight - d * 0.7); }
         }
-        foreach (var e in Children.OfType<Ellipse>().Where(e => e.RenderTransform is TranslateTransform))
-            SetLeft(e, (double)e.Tag! * ActualWidth);
+        foreach (var s in _sparks) SetLeft(s.Shape, s.X * ActualWidth);
     }
 }

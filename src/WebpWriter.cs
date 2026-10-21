@@ -29,8 +29,16 @@ static class WebpWriter
             var target = Path.Combine(dir, dll);
             using var res = asm.GetManifestResourceStream(dll)!;
             if (File.Exists(target) && new FileInfo(target).Length == res.Length) continue;
-            try { using var fs = File.Create(target); res.CopyTo(fs); }
-            catch (IOException) { /* another instance is extracting/using it */ }
+            var temp = $"{target}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                using (var fs = File.Create(temp)) res.CopyTo(fs);
+                File.Move(temp, target, overwrite: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                try { File.Delete(temp); } catch { }
+            }
         }
         return _handle = NativeLibrary.Load(Path.Combine(dir, "libwebp.dll"));
     }
